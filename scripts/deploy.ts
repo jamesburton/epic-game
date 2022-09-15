@@ -14,6 +14,11 @@ const images = [
 const hp = [50,35,199,100,2000,600,89,27,130,109];
 const damage = [200,300,50,100,10,75,120,45,137,666];
 
+const bossName = 'Slimer';
+const bossImage = 'https://upload.wikimedia.org/wikipedia/en/thumb/7/7c/Slimer_%28Ghostbusters_1984_film_character%29.png/220px-Slimer_%28Ghostbusters_1984_film_character%29.png';
+const bossHP = 5000;
+const bossDamage = 65;
+
 const main = async () => {
     const gameContractFactory = await hre.ethers.getContractFactory('MyEpicGame');
     // const gameContract = await gameContractFactory.deploy(
@@ -25,33 +30,24 @@ const main = async () => {
     //   [100, 50, 25]                       // Attack damage values
     // );
     const gameContract = await gameContractFactory.deploy(
-        names, images, hp, damage
+        names, images, hp, damage,
+        bossName, bossImage, bossHP, bossDamage
     );
     await gameContract.deployed();
     console.log("Contract deployed to:", gameContract.address);
 
     let txn;
-    txn = await gameContract.mintCharacterNFT(0);
+    txn = await gameContract.mintCharacterNFT(5);
     await txn.wait();
     console.log("Minted NFT #1");
   
-    txn = await gameContract.mintCharacterNFT(1);
+    txn = await gameContract.attackBoss();
     await txn.wait();
-    console.log("Minted NFT #2");
   
-    txn = await gameContract.mintCharacterNFT(2);
+    txn = await gameContract.attackBoss();
     await txn.wait();
-    console.log("Minted NFT #3");
-  
-    txn = await gameContract.mintCharacterNFT(1);
-    await txn.wait();
-    console.log("Minted NFT #4");
   
     console.log("Done deploying and minting!");
-    
-    // Get the value of the NFT's URI.
-    let returnedTokenUri = await gameContract.tokenURI(1);
-    console.log("Token URI:", returnedTokenUri);
   };
   
   const runMain = async () => {

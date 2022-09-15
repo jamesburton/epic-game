@@ -35,6 +35,16 @@ contract MyEpicGame is ERC721 {
   // We create a mapping from the nft's tokenId => that NFTs attributes.
   mapping(uint256 => CharacterAttributes) public nftHolderAttributes;
 
+  struct BigBoss {
+    string name;
+    string imageURI;
+    uint hp;
+    uint maxHp;
+    uint attackDamage;
+  }
+
+  BigBoss public bigBoss;
+
   // A mapping from an address => the NFTs tokenId. Gives me an ez way
   // to store the owner of the NFT and reference it later.
   mapping(address => uint256) public nftHolders;
@@ -43,13 +53,28 @@ contract MyEpicGame is ERC721 {
     string[] memory characterNames,
     string[] memory characterImageURIs,
     uint[] memory characterHp,
-    uint[] memory characterAttackDmg
+    uint[] memory characterAttackDmg,
     // Below, you can also see I added some special identifier symbols for our NFT.
     // This is the name and symbol for our token, ex Ethereum and ETH. I just call mine
     // Heroes and HERO. Remember, an NFT is just a token!
+    string memory bossName, // These new variables would be passed in via run.js or deploy.js.
+    string memory bossImageURI,
+    uint bossHp,
+    uint bossAttackDamage
   )
     ERC721("Heroes", "HERO")
   {
+    // Initialize the boss. Save it to our global "bigBoss" state variable.
+    bigBoss = BigBoss({
+        name: bossName,
+        imageURI: bossImageURI,
+        hp: bossHp,
+        maxHp: bossHp,
+        attackDamage: bossAttackDamage
+    });
+
+    console.log("Done initializing boss %s w/ HP %s, img %s", bigBoss.name, bigBoss.hp, bigBoss.imageURI);
+
     for(uint i = 0; i < characterNames.length; i += 1) {
       defaultCharacters.push(CharacterAttributes({
         characterIndex: i,
@@ -125,5 +150,41 @@ contract MyEpicGame is ERC721 {
     );
     
     return output;
+  }
+
+  function attackBoss() public {
+    // Get the state of the player's NFT.
+    uint256 nftTokenIdOfPlayer = nftHolders[msg.sender];
+    // - NB: Using 'storage' so that changes are persisted in the blockchain
+    CharacterAttributes storage player = nftHolderAttributes[nftTokenIdOfPlayer];
+    console.log("\nPlayer w/ character %s about to attack. Has %s HP and %s AD", player.name, player.hp, player.attackDamage);
+    console.log("Boss %s has %s HP and %s AD", bigBoss.name, bigBoss.hp, bigBoss.attackDamage);
+    // Make sure the player has more than 0 HP.
+    require (
+        player.hp > 0,
+        "Error: character must have HP to attack boss."
+    );
+
+    // Make sure the boss has more than 0 HP.
+    require (
+        bigBoss.hp > 0,
+        "Error: boss must have HP to attack character."
+    );
+    // Allow player to attack boss.
+    if (bigBoss.hp < player.attackDamage) {
+        bigBoss.hp = 0;
+    } else {
+        bigBoss.hp = bigBoss.hp - player.attackDamage;
     }
+    // Allow boss to attack player.
+    if (player.hp < bigBoss.attackDamage) {
+        player.hp = 0;
+    } else {
+        player.hp = player.hp - bigBoss.attackDamage;
+    }
+    
+    // Console for ease.
+    console.log("Player attacked boss. New boss hp: %s", bigBoss.hp);
+    console.log("Boss attacked player. New player hp: %s\n", player.hp);
+  }
 }

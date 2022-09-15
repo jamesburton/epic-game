@@ -14,27 +14,47 @@ const images = [
 const hp = [50,35,199,100,2000,600,89,27,130,109];
 const damage = [200,300,50,100,10,75,120,45,137,666];
 
+const bossName = 'Stay Puft';
+const bossImage = 'https://upload.wikimedia.org/wikipedia/en/0/01/Mr._Stay-Puft_Marshmallow_Man.png';
+const bossHP = 10000;
+const bossDamage = 50;
+
 const main = async () => {
     const gameContractFactory = await hre.ethers.getContractFactory('MyEpicGame');
-    // const gameContract = await gameContractFactory.deploy(
-    //   ["Leo", "Aang", "Pikachu"],       // Names
-    //   ["https://i.imgur.com/pKd5Sdk.png", // Images
-    //   "https://i.imgur.com/xVu4vFL.png", 
-    //   "https://i.imgur.com/WMB6g9u.png"],
-    //   [100, 200, 300],                    // HP values
-    //   [100, 50, 25]                       // Attack damage values
-    // );
     const gameContract = await gameContractFactory.deploy(
-        names, images, hp, damage
+        names, images, hp, damage,
+        bossName, bossImage, bossHP, bossDamage
     );
     await gameContract.deployed();
     console.log("Contract deployed to:", gameContract.address);
 
     let txn;
-    // We only have three characters.
-    // an NFT w/ the character at index 2 of our array.
+    txn = await gameContract.mintCharacterNFT(0);
+    await txn.wait();
+    console.log("Minted NFT #1");
+  
+    txn = await gameContract.mintCharacterNFT(1);
+    await txn.wait();
+    console.log("Minted NFT #2");
+  
+    txn = await gameContract.attackBoss();
+    await txn.wait();
+  
+    txn = await gameContract.attackBoss();
+    await txn.wait();
+    
     txn = await gameContract.mintCharacterNFT(2);
     await txn.wait();
+    console.log("Minted NFT #3");
+      
+    txn = await gameContract.attackBoss();
+    await txn.wait();
+
+    txn = await gameContract.mintCharacterNFT(1);
+    await txn.wait();
+    console.log("Minted NFT #4");
+  
+    console.log("Done deploying and minting!");
 
     // Get the value of the NFT's URI.
     let returnedTokenUri = await gameContract.tokenURI(1);
