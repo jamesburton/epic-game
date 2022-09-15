@@ -51,6 +51,8 @@ contract MyEpicGame is ERC721 {
   // to store the owner of the NFT and reference it later.
   mapping(address => uint256) public nftHolders;
 
+  uint256 private seed;
+
   constructor(
     string[] memory characterNames,
     string[] memory characterImageURIs,
@@ -130,6 +132,41 @@ contract MyEpicGame is ERC721 {
     emit CharacterNFTMinted(msg.sender, newItemId, _characterIndex);
   }
 
+  // FROM https://github.com/willitscale/solidity-util/blob/000a42d4d7c1491cde4381c29d4b775fa7e99aac/lib/Strings.sol#L90
+  /**
+     * Index Of
+     *
+     * Locates and returns the position of a character within a string starting
+     * from a defined offset
+     * 
+     * @param _base When being used for a data type this is the extended object
+     *              otherwise this is the string acting as the haystack to be
+     *              searched
+     * @param _value The needle to search for, at present this is currently
+     *               limited to one character
+     * @param _offset The starting point to start searching from which can start
+     *                from 0, but must not exceed the length of the string
+     * @return int The position of the needle starting from 0 and returning -1
+     *             in the case of no matches found
+     */
+  function _indexOf(string memory _base, string memory _value, uint _offset)
+    internal
+    pure
+    returns (int) {
+    bytes memory _baseBytes = bytes(_base);
+    bytes memory _valueBytes = bytes(_value);
+
+    assert(_valueBytes.length == 1);
+
+    for (uint i = _offset; i < _baseBytes.length; i++) {
+        if (_baseBytes[i] == _valueBytes[0]) {
+            return int(i);
+        }
+    }
+
+    return -1;
+  }
+
   function tokenURI(uint256 _tokenId) public view override returns (string memory) {
     CharacterAttributes memory charAttributes = nftHolderAttributes[_tokenId];
 
@@ -144,6 +181,8 @@ contract MyEpicGame is ERC721 {
         ' -- NFT #: ',
         Strings.toString(_tokenId),
         '", "description": "This is an NFT that lets people play in the game Metaverse Slayer!", "image": "',
+        // Added support for using IPFS CID, by detecting lack of a colon 
+        _indexOf(charAttributes.imageURI,':',0) == -1 ? 'ipfs://' : '',
         charAttributes.imageURI,
         '", "attributes": [ { "trait_type": "Health Points", "value": ',strHp,', "max_value":',strMaxHp,'}, { "trait_type": "Attack Damage", "value": ',
         strAttackDamage,'} ]}'
@@ -175,22 +214,32 @@ contract MyEpicGame is ERC721 {
         bigBoss.hp > 0,
         "Error: boss must have HP to attack character."
     );
+    seed = (block.difficulty + block.timestamp + seed) % 100;
+    //uint256 attackDamage = (player.attackDamage/2) + ((seed * player.attackDamage / 200));
+    uint256 attackDamage = player.attackDamage; // Leave play with max damage
     // Allow player to attack boss.
-    if (bigBoss.hp < player.attackDamage) {
+    // if (bigBoss.hp < player.attackDamage) {
+    if (bigBoss.hp < attackDamage) {
         bigBoss.hp = 0;
     } else {
-        bigBoss.hp = bigBoss.hp - player.attackDamage;
+        // bigBoss.hp = bigBoss.hp - player.attackDamage;
+        bigBoss.hp = bigBoss.hp - attackDamage;
     }
+    seed = (block.difficulty + block.timestamp + seed) % 100;
+    attackDamage = (seed * bigBoss.attackDamage) / 100; // Boss applies 0-100% of maximum damage
+    attackDamage = (bigBoss.attackDamage / 4) + (3 * seed * bigBoss.attackDamage) / 400; // Boss applies 25-100% of maximum damage
     // Allow boss to attack player.
-    if (player.hp < bigBoss.attackDamage) {
+    // if (player.hp < bigBoss.attackDamage) {
+    if (player.hp < attackDamage) {
         player.hp = 0;
     } else {
-        player.hp = player.hp - bigBoss.attackDamage;
+        //player.hp = player.hp - bigBoss.attackDamage;
+        player.hp = player.hp - attackDamage;
     }
     
     // Console for ease.
     console.log("Player attacked boss. New boss hp: %s", bigBoss.hp);
-    console.log("Boss attacked player. New player hp: %s\n", player.hp);
+    console.log("Boss attacked player for %s damage. New player hp: %s\n", attackDamage, player.hp);
 
     // Emit event
     emit AttackComplete(msg.sender, bigBoss.hp, player.hp);
@@ -217,6 +266,4 @@ contract MyEpicGame is ERC721 {
   function getBigBoss() public view returns (BigBoss memory) {
     return bigBoss;
   }
-
-
 }
